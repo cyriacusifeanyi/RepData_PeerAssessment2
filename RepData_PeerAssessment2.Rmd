@@ -1,0 +1,230 @@
+---
+title: "Weather Event Most Harmful to the Population and the Economy of the United States."
+author: "Cyriacus Ifeanyi"
+date: "31/12/2019"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Synopsis:  
+*Weather Event like Lightning, Hurricane, Flood, Tornado and more, can pose danger to life and properties. This paper gives a clear cut or easily reproduciable experiment that answer the following question:*  
+*1. Across the United States, which types of events are most harmful with respect to population health?.*  
+*2. Across the United States, which types of events have the greatest economic consequences?*  
+*Data used for this experiment was goten form The U.S. National Oceanic and Atmospheric Administration’s (NOAA) storm database.*  
+*In this paper I was able conclude that the event type mostly associated to human health in the United State is Tornado and for the economy is Flood.*  
+
+## Data Processing  
+### 1. Required Libraries  
+```{r requiredLibraries}
+library(readr, quietly = T, warn.conflicts = F)
+library(dplyr, quietly = T, warn.conflicts = F)
+library(tidyr, quietly = T, warn.conflicts = F)
+library(ggplot2, quietly = T, warn.conflicts = F)
+```
+
+### 2. Hardware and Software description  
+```{r sessionInfo}
+sessionInfo()
+```
+### 3. Dataset Sources:  
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) `storm database`. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage. [STORM DATASET](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2)  
+
+There is also some documentation of the database available. Here you will find how some of the variables are constructed/defined.  
+1. National Weather Service [Storm Data Documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf).  
+2. National Climatic Data Center Storm Events [FAQ](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf).  
+
+#### Downloading and reading the STORM Dataset:  
+```{r dataset, error=FALSE, message=FALSE, warning=FALSE, cache=TRUE, prompt=FALSE}
+dataset.url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+dataset.dir <- "data"
+dataset.name <- "repdata_data_StormData.csv.bz2"
+dataset.destfile <- file.path(dataset.dir, dataset.name)
+
+if(!file.exists(dataset.dir)){
+  dir.create(path = dataset.dir)
+}
+
+if(!file.exists(dataset.destfile)){
+  download.file(url = dataset.url,
+                destfile = dataset.destfile)
+}
+
+storm_df <- read_csv(dataset.destfile)
+```
+
+#### Selecting the column required for analysis  
+```{r}
+storm_df <- storm_df %>%
+  select(EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
+```
+
+#### Regularising Event type (EVTYPE) Variable
+The Event types variable (EVTYPE) have some input error resulting from spellings errors, case, etc. (i.e "THUNDERSTORM WIND", "THUNDERSTORM WINDS", "TSTM").  
+```{r}
+uniqueEvent <- length(unique(storm_df$EVTYPE))
+```
+There are currently `r uniqueEvent` unique entry in the EVTYPE variable whereass, according to the Chapter 7.1 - 7.48 of the STORM DATASET documentation there are 48 main Event Type.
+
+##### Regularising based on the expected 48 Event Type.  
+```{r regularising1}
+storm_df$EVTYPE <- gsub("^(Astronomical Low Tide).*", "Astronomical Low Tide", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Avalanche).*", "Avalanche", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Blizzard).*", "Blizzard", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Coastal Flood).*", "Coastal Flood", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(CoastalFlood).*", "Coastal Flood", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Cold/Wind Chill).*", "Cold/Wind Chill", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Cold).*", "Cold/Wind Chill", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Wind Chill).*", "Cold/Wind Chill", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Debris Flow).*", "Debris Flow", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Dense Fog).*", "Dense Fog", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Fog).*", "Dense Fog", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Dense Smoke).*", "Dense Smoke", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Drought).*", "Drought", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Dust Devil).*", "Dust Devil", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Dust Storm).*", "Dust Storm", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Excessive Heat).*", "Excessive Heat", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Extreme Cold/Wind Chill).*", "Extreme Cold/Wind Chill", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Flash Flood).*", "Flash Flood", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Flood).*", "Flood", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Freezing Fog).*", "Freezing Fog", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Frost/Freeze).*", "Frost/Freeze", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Frost).*", "Frost/Freeze", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Freeze).*", "Frost/Freeze", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Funnel Cloud).*", "Funnel Cloud", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Hail).*", "Hail", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Heat).*", "Heat", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Heavy Rain).*", "Heavy Rain", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Heavy Snow).*", "Heavy Snow", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(High Surf).*", "High Surf", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(High Wind).*", "High Wind", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Hurricane).*", "Hurricane/Typhoon", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Typhoon).*", "Hurricane/Typhoon", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Ice Storm).*", "Ice Storm", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Lakeshore Flood).*", "Lakeshore Flood", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Lake-Effect Snow).*", "Lake-Effect Snow", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Lightning).*", "Lightning", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Marine Hail).*", "Marine Hail", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Marine High Wind).*", "Marine High Wind", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Marine Strong Wind).*", "Marine Strong Wind", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Marine Thunderstorm Wind).*", "Marine Thunderstorm Wind", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(MARINE TSTM WIND).*", "Marine Thunderstorm Wind", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Rip Current).*", "Rip Current", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Seiche).*", "Seiche", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Sleet).*", "Sleet", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Storm Tide).*", "Storm Tide", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Strong Wind).*", "Strong Wind", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Thunderstorm Wind).*", "Thunderstorm Wind", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(TSTM).*", "Thunderstorm Wind",x = storm_df$EVTYPE, ignore.case = TRUE) #926
+storm_df$EVTYPE <- gsub("^(THUNDER*.STORM).*", "Thunderstorm Wind",x = storm_df$EVTYPE, ignore.case = TRUE) #853
+storm_df$EVTYPE <- gsub("^(Tornado).*", "Tornado", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Tropical Depression).*", "Tropical Depression", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Tropical Storm).*", "Tropical Storm", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Tsunami).*", "Tsunami", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Volcanic Ash).*", "Volcanic Ash", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Waterspout).*", "Waterspout", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Wildfire).*", "Wildfire", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Winter Storm).*", "Winter Storm", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df$EVTYPE <- gsub("^(Winter Weather).*", "Winter Weather", x = storm_df$EVTYPE, ignore.case = TRUE)
+storm_df <- storm_df[!grepl(pattern = "^(Summary).*", x = storm_df$EVTYPE,
+                            ignore.case = TRUE),]
+# updating the no unique event
+uniqueEvent <- length(unique(storm_df$EVTYPE))
+```
+
+*After performing the above correction the unique Event are now `r uniqueEvent`.*  
+
+##### Regularising based observed anomalies
+Sample of the dataset, showing Top 10 `EVTYPE` based on frequency `(n)` in the Storm_df.  
+```{r regularising2}
+head(x = select(storm_df, EVTYPE) %>%
+       group_by(EVTYPE) %>%
+       summarise(n = n()) %>%
+       arrange(desc(n)), 
+     n = 10)
+```
+
+## Analysis questions:  
+### 1: Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+```{r analysis1}
+population.health <- select(storm_df, Event.Type = EVTYPE, FATALITIES, INJURIES) %>%
+  mutate(Event.Type = as.factor(Event.Type)) %>%
+  group_by(Event.Type) %>%
+  summarise(Fatalities = sum(FATALITIES),
+            Injuries = sum(INJURIES),
+            Total = sum(FATALITIES, INJURIES)) %>%
+  arrange(desc(Total))
+
+head(population.health, 10)
+```
+
+
+```{r analysis1_plot}
+#subseting the first 5 based on Total variable
+pivot_longer(data = population.health[1:5,1:3], Fatalities:Injuries, names_to = "Type", values_to = "Total") %>%
+  
+  #plotting
+  ggplot() + 
+  aes(x=reorder(Event.Type, +Total), y=Total, fill=Type) +
+  scale_fill_manual(values = c("#e41a11","#fa975080")) +
+  labs(title = "Graph Showing number of Casuality of Weather Events in U.S." ,
+       subtitle = "With Distintion of Whether event led to Fatility or Injury.")+ 
+  theme(plot.title = element_text(lineheight=0.8, face="bold")) +
+  xlab("Event Type") +
+  ylab("Total Casuality") +
+  geom_histogram(stat="identity", alpha=1) + 
+  coord_flip()
+
+```
+
+### 2: Across the United States, which types of events have the greatest economic consequences?  
+```{r analysis2}
+economic_effect <- select(storm_df, Event.Type = EVTYPE, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP) %>%
+  mutate(PROPDMGEXP = as.character(PROPDMGEXP), CROPDMGEXP = as.character(CROPDMGEXP))
+
+economic_effect$PROPDMGEXP <- recode(economic_effect$PROPDMGEXP, "-" = 1, "?" = 1, "+" = 1, "0" = 1, "1" = 10, "2" = 10^2, "3" = 10^3, "4" = 10^4, "5" = 10^5, "6" = 10^6, "7" = 10^7, "8" = 10^8, "9" = 10^9, "h" = 10^2, "H" = 10^2, "k" = 10^3, "K" = 10^3, "m" = 10^6, "M" = 10^6, "b" = 10^9, "B" = 10^9, .default = 1, .missing = 1) 
+
+economic_effect$CROPDMGEXP <- recode(economic_effect$CROPDMGEXP, "FALSE" = 1 , .default = 1, .missing = 1)
+
+economic_effect <- mutate(economic_effect, 
+                          Event.Type = Event.Type,
+                          Property = PROPDMG * PROPDMGEXP,
+                          Crop = CROPDMG * CROPDMGEXP,
+                          Total.Damages = Property + Crop) %>%
+  mutate(Event.Type = as.factor(Event.Type)) %>%
+  group_by(Event.Type) %>%
+  summarise(Property = sum(Property),
+            Crop = sum(Crop),
+            Total.Damages = sum(Total.Damages)) %>%
+  arrange(desc(Total.Damages))
+
+head(economic_effect, 10)
+
+```
+
+
+```{r analysis2_plot}
+#subseting the first 5 based on Total variable
+pivot_longer(data = economic_effect[1:5,1:3], Property:Crop, names_to = "Damage", values_to = "Total") %>%
+  #plotting
+  ggplot()+
+  aes(x=reorder(Event.Type, +Total), y=Total, fill=Damage) +
+  scale_fill_manual(values = c("#039e16","#cf790b")) +
+  theme(plot.title = element_text(lineheight=0.8, face="bold")) +
+  xlab("Event Type") +
+  ylab("Total Value ($)")+
+  labs(title = "Graph Showing Economic Effect of Weather Events in U.S." ,
+       subtitle = "Focusing on the Total Property and Crop Damage Value.")+
+  facet_wrap(. ~ Damage, scales = "free", ncol = 1) +
+  geom_histogram(stat="identity", alpha=1) + 
+  coord_flip()
+  
+```
+
+
+## Results   
+1. From the above analysis i can conclude that the most harzardious event type associated to human health in the United State is `Tornado`
+2. From the last graph and table one can easily infer that `Flood` is the most harzardious event type that affect the economy in general.  
+*Also from the analysis2 graph facets you can see the strong points of each of these weather event on Crop and Properties specifically*
